@@ -1,5 +1,5 @@
 [package]
-name = "rust_proxy"
+name = "sparrow-proxy-service"
 version = "0.1.0"
 edition = "2021"
 
