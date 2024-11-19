@@ -179,8 +179,16 @@ async fn main() {
         .and_then(handle_request)
         .with(cors);
 
+    // Define the GET route for server health check
+    let get_route = warp::path("health")
+        .and(warp::get())
+        .map(|| warp::reply::json(&json!({ "message": "Server is up" })));
+
+    // Combine routes
+    let routes = post_route.or(get_route);
+
     // Start the server
-    warp::serve(post_route).run(([127, 0, 0, 1], 8080)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], 8080)).await;
 }
 
 async fn handle_request(req: HttpRequest) -> Result<impl warp::Reply, warp::Rejection> {
