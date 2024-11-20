@@ -721,6 +721,14 @@
     socket.io "4.8.0"
     tslib "2.7.0"
 
+"@nestjs/platform-ws@^10.4.8":
+  version "10.4.8"
+  resolved "https://registry.yarnpkg.com/@nestjs/platform-ws/-/platform-ws-10.4.8.tgz#8f531c570901f5c5f66e17b30558f633de11a3b0"
+  integrity sha512-m9/bUcEGWNdVmXvakmMnlDvbQqPQqbz5WaajecWQSwwMrfAKFATq86Lg9vyHYYWK9h3eiPEhIFsZcrtxqPEoLQ==
+  dependencies:
+    tslib "2.7.0"
+    ws "8.18.0"
+
 "@nestjs/schematics@^10.0.0", "@nestjs/schematics@^10.0.1":
   version "10.2.3"
   resolved "https://registry.yarnpkg.com/@nestjs/schematics/-/schematics-10.2.3.tgz#6053f43c5065b9e825cd08c4db1bf6bcbc9a6a62"
@@ -1060,6 +1068,13 @@
   dependencies:
     "@types/methods" "^1.1.4"
     "@types/superagent" "^8.1.0"
+
+"@types/ws@^8.5.13":
+  version "8.5.13"
+  resolved "https://registry.yarnpkg.com/@types/ws/-/ws-8.5.13.tgz#6414c280875e2691d0d1e080b05addbf5cb91e20"
+  integrity sha512-osM/gWBTPKgHV8XkTunnegTRIsvF6owmf5w+JtAfOw472dptdm0dlGv4xCt6GwQRcC2XVOvvRE/0bAoQcL2QkA==
+  dependencies:
+    "@types/node" "*"
 
 "@types/yargs-parser@*":
   version "21.0.3"
@@ -4946,6 +4961,11 @@ write-file-atomic@^4.0.2:
   dependencies:
     imurmurhash "^0.1.4"
     signal-exit "^3.0.7"
+
+ws@8.18.0:
+  version "8.18.0"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-8.18.0.tgz#0d7505a6eafe2b0e712d232b42279f53bc289bbc"
+  integrity sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==
 
 ws@~8.17.1:
   version "8.17.1"
