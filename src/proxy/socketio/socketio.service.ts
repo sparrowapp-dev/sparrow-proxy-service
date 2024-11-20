@@ -71,6 +71,13 @@ export class SocketIoService {
    * Register frontend client for a specific `tabid`.
    */
   registerFrontendClient(tabid: string, clientSocket): void {
+    // Register Disconnect to facilitate manual disconnection from sparrow
+    clientSocket.on(`disconnect-socket-${tabid}`, async () => {
+      const client = this.frontendClients.get(tabid);
+      if (client) {
+        await this.disconnectFromRealSocket(tabid, true);
+      }
+    });
     this.frontendClients.set(tabid, clientSocket);
   }
 
@@ -84,17 +91,23 @@ export class SocketIoService {
   /**
    * Disconnect from the real Socket.IO server for a specific `tabid`.
    */
-  async disconnectFromRealSocket(tabid: string): Promise<void> {
+  async disconnectFromRealSocket(
+    tabid: string,
+    manualDisconnection: boolean = false,
+  ): Promise<void> {
     const realSocket = this.realSocketClients.get(tabid);
 
     if (realSocket) {
       realSocket.disconnect();
       this.realSocketClients.delete(tabid);
-      this.emitToFrontendClient(
-        tabid,
-        `socket-disconnect-${tabid}`,
-        'Disconnected from Socket.io',
-      );
+      if (!manualDisconnection) {
+        // Emit event in case of abrupt disconnection like real socket server going down
+        this.emitToFrontendClient(
+          tabid,
+          `socket-disconnect-${tabid}`,
+          'Disconnected from Socket.io',
+        );
+      }
       console.log(`Disconnected Socket.IO connection for TabID=${tabid}`);
     }
   }
