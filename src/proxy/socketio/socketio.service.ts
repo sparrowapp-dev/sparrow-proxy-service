@@ -52,10 +52,10 @@ export class SocketIoService {
         args,
       );
 
-      const frontendSocket = this.frontendClients.get(tabid);
-      if (frontendSocket) {
-        frontendSocket.emit(event, ...args); // Emit the event and data to the frontend
-      }
+      this.emitToFrontendClient(tabid, `socket-message-${tabid}`, {
+        event,
+        message: args,
+      });
     });
 
     // Handle disconnection of the real server
@@ -90,7 +90,11 @@ export class SocketIoService {
     if (realSocket) {
       realSocket.disconnect();
       this.realSocketClients.delete(tabid);
-      this.emitToFrontendClient(tabid, `socket-disconnect-${tabid}`, {});
+      this.emitToFrontendClient(
+        tabid,
+        `socket-disconnect-${tabid}`,
+        'Disconnected from Socket.io',
+      );
       console.log(`Disconnected Socket.IO connection for TabID=${tabid}`);
     }
   }
@@ -124,11 +128,6 @@ export class SocketIoService {
 
     if (!frontendSocket) {
       throw new Error(`No connection found for TabID=${tabid}`);
-    }
-
-    if (Array.isArray(data)) {
-      frontendSocket.emit(event, ...data);
-      return;
     }
     frontendSocket.emit(event, data);
   }
