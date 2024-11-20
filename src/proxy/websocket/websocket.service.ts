@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { WebSocket } from 'ws';
 
+export enum WebsocketEvent {
+  disconnect = 'disconnect',
+  connect = 'connect',
+  message = 'message',
+}
+
 @Injectable()
 export class WebSocketService {
   private frontendClients: Map<string, WebSocket> = new Map();
@@ -33,28 +39,6 @@ export class WebSocketService {
           console.log(`Connected to real WebSocket server for TabID=${tabid}`);
           this.realWebSocketClients.set(tabid, realWebSocket);
 
-          // Forward messages from the real server to the frontend client
-          realWebSocket.on('message', (data) => {
-            const frontendSocket = this.frontendClients.get(tabid);
-            if (frontendSocket) {
-              frontendSocket.send(data); // Forward the data to the frontend client
-            }
-          });
-
-          realWebSocket.on('close', () => {
-            console.log(
-              `Real WebSocket server disconnected for TabID=${tabid}`,
-            );
-            this.cleanupConnectionsByTabId(tabid);
-          });
-
-          realWebSocket.on('error', (error) => {
-            console.error(
-              `Error with Real WebSocket connection for TabID=${tabid}: ${error.message}`,
-            );
-            this.cleanupConnectionsByTabId(tabid);
-          });
-
           // Forward messages from the frontend client to the real WebSocket server
           frontendClient.on('message', (message) => {
             if (realWebSocket.readyState === WebSocket.OPEN) {
@@ -62,20 +46,41 @@ export class WebSocketService {
             }
           });
 
-          frontendClient.on('close', () => {
-            console.log(`Frontend client disconnected for TabID=${tabid}`);
+          // Recieve messages from the real server and forward them to the frontend client
+          realWebSocket.on('message', (data) => {
+            const frontendSocket = this.frontendClients.get(tabid);
+            if (frontendSocket) {
+              // Convert raw buffer data to real data
+              const parsedData = this.parseWebSocketData(data);
+
+              this.sendEventToFrontendClient(
+                tabid,
+                WebsocketEvent.message,
+                parsedData,
+              );
+            }
+          });
+
+          // Handle real websocket server disconnection
+          realWebSocket.on('close', (reasonCode) => {
+            console.log(
+              `Real WebSocket server disconnected for TabID=${tabid}`,
+            );
+            // Cleanup connection in case of abnormal closure(not a manual disconnection)
+            if (reasonCode === 1006) {
+              this.cleanupConnectionsByTabId(tabid);
+            }
+          });
+
+          // Handle real websocket server error
+          realWebSocket.on('error', (error) => {
+            console.error(
+              `Error with Real WebSocket connection for TabID=${tabid}: ${error.message}`,
+            );
             this.cleanupConnectionsByTabId(tabid);
           });
 
-          resolve(true);
-        });
-
-        realWebSocket.on('error', (error) => {
-          console.error(
-            `Failed to connect to real WebSocket server for TabID=${tabid}: ${error.message}`,
-          );
-          this.cleanupConnectionsByTabId(tabid);
-          resolve(true);
+          return resolve(true);
         });
       });
     } catch (error) {
@@ -87,6 +92,30 @@ export class WebSocketService {
   }
 
   /**
+   * Parse raw WebSocket data (Buffer or Text).
+   */
+  private parseWebSocketData(data: any): any {
+    if (Buffer.isBuffer(data)) {
+      // Attempt to decode as JSON
+      try {
+        return JSON.parse(data.toString('utf-8'));
+      } catch {
+        // Fallback to returning as plain text if not JSON
+        return data.toString('utf-8');
+      }
+    } else if (typeof data === 'string') {
+      // Text data
+      try {
+        return JSON.parse(data);
+      } catch {
+        return data; // If not JSON, return as plain string
+      }
+    } else {
+      return data; // If unknown, return as-is
+    }
+  }
+
+  /**
    * Clean up connections by TabID.
    */
   cleanupConnectionsByTabId(tabid: string) {
@@ -94,6 +123,7 @@ export class WebSocketService {
     const realSocket = this.realWebSocketClients.get(tabid);
 
     if (frontendSocket) {
+      this.sendEventToFrontendClient(tabid, WebsocketEvent.disconnect);
       frontendSocket.close();
       this.frontendClients.delete(tabid);
     }
@@ -116,6 +146,25 @@ export class WebSocketService {
         this.cleanupConnectionsByTabId(tabid);
         break;
       }
+    }
+  }
+
+  sendEventToFrontendClient(
+    tabId: string,
+    event: WebsocketEvent,
+    data: any = null,
+  ) {
+    const frontendSocket = this.frontendClients.get(tabId);
+    if (frontendSocket) {
+      const payload = {
+        event,
+        tabId,
+        data: null,
+      };
+      if (data) {
+        payload['data'] = data;
+      }
+      frontendSocket.send(JSON.stringify(payload));
     }
   }
 }

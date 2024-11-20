@@ -5,7 +5,7 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { WebSocketServer as WsServer, WebSocket } from 'ws';
-import { WebSocketService } from './websocket.service';
+import { WebSocketService, WebsocketEvent } from './websocket.service';
 import * as url from 'url';
 
 @WSGateway({ path: '/ws', cors: true })
@@ -54,33 +54,14 @@ export class WebSocketGateway
       client.close(4001, 'Failed to connect to real WebSocket server');
     }
 
-    client.on('message', async (message) => {
-      try {
-        const { tabid, targetUrl } = JSON.parse(message.toString());
-        if (!tabid || !targetUrl) {
-          console.error('Missing tabid or targetUrl in message.');
-          client.send(
-            JSON.stringify({
-              error: 'TabID and TargetURL are required',
-            }),
-          );
-          client.close();
-          return;
-        }
-      } catch (err) {
-        console.error('Error handling WebSocket connection:', err.message);
-        client.send(
-          JSON.stringify({
-            error: err.message || 'Unknown error occurred',
-          }),
-        );
-        client.close();
-      }
-    });
+    this.websocketService.sendEventToFrontendClient(
+      tabid,
+      WebsocketEvent.connect,
+    );
 
-    client.on('close', () => {
-      console.log('Frontend WebSocket client disconnected.');
-      this.websocketService.cleanupConnectionsByClient(client);
+    client.on('message', (data) => {
+      console.log('Frontend WebSocket client message received.');
+      console.log(data);
     });
 
     client.on('error', (error) => {
