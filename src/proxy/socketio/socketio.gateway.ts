@@ -5,21 +5,22 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { SocketService } from './socket.service';
+import { SocketIoService } from './socketio.service';
 
 @WebSocketGateway({ cors: true })
-export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class SocketIoGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly socketService: SocketService) {}
+  constructor(private readonly socketIoService: SocketIoService) {}
 
   /**
    * Handle WebSocket connection from Sparrow Web App
    */
   async handleConnection(client: Socket) {
     const { url, namespace } = client.handshake.query;
-
     if (!url || !namespace) {
       client.disconnect();
       console.error('Missing required query parameters: url or namespace');
@@ -28,7 +29,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       // Connect to the real Socket.IO server
-      await this.socketService.connectToRealSocket(
+      await this.socketIoService.connectToRealSocket(
         client.id,
         url as string,
         namespace as string,
@@ -42,7 +43,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         try {
           // Forward the dynamic event and its arguments to the real server
-          await this.socketService.emitToRealSocket(client.id, event, args);
+          await this.socketIoService.emitToRealSocket(client.id, event, args);
         } catch (err) {
           console.error(`Failed to forward event ${event}: ${err.message}`);
         }
@@ -60,6 +61,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   async handleDisconnect(client: Socket) {
     console.log(`Proxy connection closed: ClientID=${client.id}`);
-    await this.socketService.disconnectFromRealSocket(client.id);
+    await this.socketIoService.disconnectFromRealSocket(client.id);
   }
 }

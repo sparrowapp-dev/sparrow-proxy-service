@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { io, Socket } from 'socket.io-client';
 
 @Injectable()
-export class SocketService {
+export class SocketIoService {
   private realSocketClients: Map<string, Socket> = new Map();
   private frontendClients: Map<string, Socket> = new Map();
 
