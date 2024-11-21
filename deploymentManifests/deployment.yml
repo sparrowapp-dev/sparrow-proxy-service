@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: sparrow-proxy
+  name: sparrow-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sparrow-proxy
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: sparrow-proxy
+    spec:
+      containers:
+        - image: sparrowprod.azurecr.io/sparrow-proxy:_BUILD__ID_
+          name: sparrow-proxy
+          imagePullPolicy: Always
+          resources: {}
+          ports:
+            - containerPort: 80
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sparrow-api
+  labels:
+    run: sparrow-api
+spec:
+  type: ClusterIP
+  selector:
+    app: sparrow-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
