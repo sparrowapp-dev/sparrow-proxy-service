@@ -29,13 +29,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sparrow-api
+  name: sparrow-proxy
   labels:
-    run: sparrow-api
+    run: sparrow-proxy
 spec:
   type: ClusterIP
   selector:
-    app: sparrow-api
+    app: sparrow-proxy
   ports:
     - protocol: TCP
       port: 80
