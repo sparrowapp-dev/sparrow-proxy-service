@@ -81,7 +81,7 @@ export class HttpService {
       }
 
       // Some websites like facebook.com are blocking the default browser user agent so hardcoding custom agent
-      config.headers['User-Agent'] = 'SparrownRuntime/1.0.0';
+      config.headers['User-Agent'] = 'SparrowRuntime/1.0.0';
 
       // Make the HTTP request using Axios
       const axiosRequestObject = {
