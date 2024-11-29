@@ -16,20 +16,28 @@ export class HttpService {
   }: {
     url: string;
     method: string;
-    headers: string; // Passed as a stringified array
+    headers: string;
     body: any;
     contentType: string;
-  }): Promise<{ status: number; data: any; headers: Map<string, string> }> {
+  }): Promise<{ status: string; data: any; headers: any }> {
     try {
       // Parse headers from stringified JSON
       const parsedHeaders: Record<string, string> = {};
-      const headersArray = JSON.parse(headers);
+      let headersArray;
 
-      headersArray.forEach((item: any) => {
-        if (item.checked) {
-          parsedHeaders[item.key] = item.value;
+      try {
+        headersArray = JSON.parse(headers);
+        if (Array.isArray(headersArray)) {
+          headersArray.forEach((item: any) => {
+            if (item?.checked) {
+              parsedHeaders[item.key] = item.value;
+            }
+          });
         }
-      });
+      } catch (headerError) {
+        console.error('Error parsing headers:', headerError);
+        throw new Error('Invalid headers format');
+      }
 
       // Prepare the request configuration
       const config: any = {
@@ -39,71 +47,88 @@ export class HttpService {
         data: null,
       };
 
-      // Prepare the request body based on the content type
-      switch (contentType) {
-        case 'application/json':
-          config.data = JSON.parse(body);
-          break;
+      // Handle body based on content type
+      try {
+        switch (contentType) {
+          case 'application/json':
+            config.data = typeof body === 'string' ? JSON.parse(body) : body;
+            break;
 
-        case 'application/x-www-form-urlencoded':
-          const formUrlEncoded = new URLSearchParams(JSON.parse(body));
-          config.data = formUrlEncoded.toString();
-          config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-          break;
+          case 'application/x-www-form-urlencoded':
+            const formUrlEncoded = new URLSearchParams(
+              typeof body === 'string' ? JSON.parse(body) : body,
+            );
+            config.data = formUrlEncoded.toString();
+            config.headers['Content-Type'] =
+              'application/x-www-form-urlencoded';
+            break;
 
-        case 'multipart/form-data':
-          const formData = new FormData();
-          const parsedBody = JSON.parse(body);
+          case 'multipart/form-data':
+            const formData = new FormData();
+            const parsedBody =
+              typeof body === 'string' ? JSON.parse(body) : body;
 
-          parsedBody.forEach((item: any) => {
-            if (item.base) {
-              formData.append(item.key, fs.createReadStream(item.base));
-            } else {
-              formData.append(item.key, item.value);
+            if (Array.isArray(parsedBody)) {
+              parsedBody.forEach((item: any) => {
+                if (item.base) {
+                  formData.append(item.key, fs.createReadStream(item.base));
+                } else {
+                  formData.append(item.key, item.value);
+                }
+              });
             }
-          });
 
-          config.data = formData;
-          config.headers = {
-            ...parsedHeaders,
-            ...formData.getHeaders(), // Add FormData-specific headers
-          };
-          break;
+            config.data = formData;
+            config.headers = {
+              ...parsedHeaders,
+              ...formData.getHeaders(),
+            };
+            break;
 
-        case 'text/plain':
-          config.data = body;
-          config.headers['Content-Type'] = 'text/plain';
-          break;
+          case 'text/plain':
+            config.data = body;
+            config.headers['Content-Type'] = 'text/plain';
+            break;
 
-        default:
-          // No body for GET/HEAD/other requests
-          break;
+          default:
+            break;
+        }
+      } catch (bodyError) {
+        console.error('Error processing request body:', bodyError);
+        throw new Error('Invalid request body format');
       }
 
-      // Some websites like facebook.com are blocking the default browser user agent so hardcoding custom agent
+      // Add custom user agent
       config.headers['User-Agent'] = 'SparrowRuntime/1.0.0';
 
-      // Make the HTTP request using Axios
-      const axiosRequestObject = {
-        url: config.url,
-        method: config.method,
-        headers: config.headers,
-        data: config.data,
-      };
-
-      const response = await this.httpService.axiosRef(axiosRequestObject);
-
-      // Return the response in the desired format
-      return {
-        status: response.status,
-        data: response.data,
-        headers: new Map(Object.entries(response.headers)),
-      };
-    } catch (error) {
-      // Return any error from the backend as-is
-      throw new Error(
-        error.response?.data || error.message || 'Unknown error occurred',
-      );
+      try {
+        const response = await this.httpService.axiosRef({
+          url: config.url,
+          method: config.method,
+          headers: config.headers,
+          data: config.data,
+        });
+        const resp = {
+          status:
+            response.status + ' ' + (response.statusText || 'Unknown Status'),
+          data: response.data,
+          headers: response.headers,
+        };
+        return resp;
+      } catch (axiosError: any) {
+        return {
+          status: axiosError.response?.status
+            ? axiosError.response?.status +
+              ' ' +
+              (axiosError.response?.statusText || 'Unknown Status')
+            : null,
+          data: axiosError.response?.data || { message: axiosError.message },
+          headers: axiosError.response?.headers,
+        };
+      }
+    } catch (error: any) {
+      console.error('HTTP Service Error:', error);
+      throw new Error(error.message || 'Unknown error occurred');
     }
   }
 }
