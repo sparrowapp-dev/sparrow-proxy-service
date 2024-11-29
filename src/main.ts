@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { WsAdapter } from '@nestjs/platform-ws';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { CustomWebSocketAdapter } from './adapters/custom-websocket-adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.useWebSocketAdapter(new WsAdapter(app));
+
+  // Use the custom WebSocket adapter
+  app.useWebSocketAdapter(new CustomWebSocketAdapter(app));
 
   /**
    * The url endpoint for open api ui

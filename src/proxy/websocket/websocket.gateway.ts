@@ -18,6 +18,13 @@ export class WebSocketGateway
   constructor(private readonly websocketService: WebSocketService) {}
 
   /**
+   * Lifecycle hook that runs when the WebSocket gateway is initialized.
+   */
+  async afterInit() {
+    console.log('WebSocket Gateway initialized!');
+  }
+
+  /**
    * Handle WebSocket connection from the frontend client.
    */
   async handleConnection(client: WebSocket, req: Request) {
