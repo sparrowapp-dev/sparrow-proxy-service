@@ -36,11 +36,11 @@ export class HttpController {
       });
 
       // Set the response headers and status
-      response.headers.forEach((value, key) => {
-        res.setHeader(key, value);
-      });
+      // response.headers.forEach((value, key) => {
+      //   // res.setHeader(key, value);
+      // });
 
-      res.status(response.status).send(response.data);
+      return res.status(200).send(response);
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.BAD_GATEWAY);
     }
