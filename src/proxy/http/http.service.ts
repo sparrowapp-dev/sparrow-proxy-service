@@ -29,9 +29,7 @@ export class HttpService {
         headersArray = JSON.parse(headers);
         if (Array.isArray(headersArray)) {
           headersArray.forEach((item: any) => {
-            if (item?.checked) {
-              parsedHeaders[item.key] = item.value;
-            }
+            parsedHeaders[item.key] = item.value;
           });
         }
       } catch (headerError) {
@@ -55,9 +53,23 @@ export class HttpService {
             break;
 
           case 'application/x-www-form-urlencoded':
-            const formUrlEncoded = new URLSearchParams(
-              typeof body === 'string' ? JSON.parse(body) : body,
-            );
+            // Parse body if it's a string
+            const formParsedBody =
+              typeof body === 'string' ? JSON.parse(body) : body;
+
+            if (!Array.isArray(formParsedBody)) {
+              throw new Error('Body must be an array for URL-encoded data.');
+            }
+
+            // Filter and transform the body into key-value pairs
+            const formBody: Record<string, string> = {};
+            formParsedBody.forEach((item: any) => {
+              if (item.checked === true) {
+                formBody[item.key] = item.value;
+              }
+            });
+
+            const formUrlEncoded = new URLSearchParams(formBody);
             config.data = formUrlEncoded.toString();
             config.headers['Content-Type'] =
               'application/x-www-form-urlencoded';
@@ -67,7 +79,6 @@ export class HttpService {
             const formData = new FormData();
             const parsedBody =
               typeof body === 'string' ? JSON.parse(body) : body;
-
             if (Array.isArray(parsedBody)) {
               parsedBody.forEach((item: any) => {
                 if (item.base) {
