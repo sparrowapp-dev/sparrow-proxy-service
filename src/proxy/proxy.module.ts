@@ -4,6 +4,6 @@ import { HttpModule } from './http/http.module';
 import { WebSocketModule } from './websocket/websocket.module';
 
 @Module({
-  imports: [HttpModule, SocketIoModule, WebSocketModule],
+  imports: [HttpModule, SocketIoModule],
 })
 export class ProxyModule {}
