@@ -1,8 +1,8 @@
-name: Development
+name: WS-TEST
 on:
   push:
     branches:
-      - development
+      - ws
 
 jobs:
    build:
