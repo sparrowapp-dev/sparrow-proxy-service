@@ -12,7 +12,7 @@ import { Server, Socket } from 'socket.io';
 @WebSocketGateway({
   namespace: '/dummy',
   cors: {
-    origin: '*',
+    origin: 'https://techdomeaks.com',
   },
   transports: ['websocket'],
   methods: ['GET', 'POST'],
