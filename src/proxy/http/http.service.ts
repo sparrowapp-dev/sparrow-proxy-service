@@ -7,6 +7,13 @@ import FormData from 'form-data';
 export class HttpService {
   constructor(private readonly httpService: NestHttpService) {}
 
+  private base64ToBuffer(base64: string): { buffer: Buffer; mime: string }  {
+    const arr = base64.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const bstr = Buffer.from(arr[1], 'base64');
+    return { buffer: bstr, mime };
+  }
+
   async makeHttpRequest({
     url,
     method,
@@ -64,9 +71,7 @@ export class HttpService {
             // Filter and transform the body into key-value pairs
             const formBody: Record<string, string> = {};
             formParsedBody.forEach((item: any) => {
-              if (item.checked === true) {
                 formBody[item.key] = item.value;
-              }
             });
 
             const formUrlEncoded = new URLSearchParams(formBody);
@@ -80,13 +85,18 @@ export class HttpService {
             const parsedBody =
               typeof body === 'string' ? JSON.parse(body) : body;
             if (Array.isArray(parsedBody)) {
-              parsedBody.forEach((item: any) => {
-                if (item.base) {
-                  formData.append(item.key, fs.createReadStream(item.base));
-                } else {
-                  formData.append(item.key, item.value);
+              for (const field of parsedBody || []) {
+                try{
+                  if (field?.base) {
+                    const { buffer, mime } = this.base64ToBuffer(field.base);
+                    formData.append(field.key, buffer, { filename: field.value, contentType: mime });
+                  }else  {
+                    formData.append(field.key, field.value);
+                  }
+                }catch(e){
+                  formData.append(field.key, field.value);
                 }
-              });
+              }
             }
 
             config.data = formData;
@@ -111,7 +121,7 @@ export class HttpService {
 
       // Add custom user agent
       config.headers['User-Agent'] = 'SparrowRuntime/1.0.0';
-
+      
       try {
         const response = await this.httpService.axiosRef({
           url: config.url,
