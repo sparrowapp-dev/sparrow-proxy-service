@@ -1,147 +1,46 @@
-import { Injectable } from '@nestjs/common';
-import { io, Socket } from 'socket.io-client';
+import { Injectable } from "@nestjs/common";
+import { io, Socket as SocketClient } from "socket.io-client";
+import { Socket as SocketServer } from "socket.io";
 
 @Injectable()
 export class SocketIoService {
-  private realSocketClients: Map<string, Socket> = new Map(); // tabid-specific connections
-  private frontendClients: Map<string, Socket> = new Map(); // tabid-specific frontend connections
-
   /**
-   * Connect to the real Socket.IO server with a specific `tabid`.
+   * Makes a connection to the target Socket.IO server.
    */
-  async connectToRealSocket(
-    tabid: string,
-    url: string,
-    namespace: string,
-    headers: Record<string, string> = {},
-  ): Promise<void> {
-    if (this.realSocketClients.has(tabid)) {
-      throw new Error(`TabID=${tabid} is already connected`);
-    }
-
-    const realSocket = io(`${url}${namespace}`, {
-      transports: ['websocket'],
-      extraHeaders: headers,
+  async connectToTargetSocketIO(
+    _proxySocketIO: SocketServer,
+    _targetUrl: string,
+    _namespace: string,
+    _headers: Record<string, string> = {},
+  ): Promise<SocketClient> {
+    const _targetSocketIO = io(`${_targetUrl}${_namespace}`, {
+      transports: ["websocket"],
+      extraHeaders: _headers,
+      reconnection: false,
     });
 
-    await new Promise<void>((resolve, reject) => {
-      realSocket.on('connect', () => {
-        console.log(`Connected to real Socket.IO server for TabID=${tabid}`);
-        this.realSocketClients.set(tabid, realSocket);
-        this.emitToFrontendClient(
-          tabid,
-          `socket-connect-${tabid}`,
-          'Connected to real Socket.IO server',
-        );
-        resolve();
-      });
-
-      realSocket.on('connect_error', (err) => {
-        reject(
-          new Error(
-            `Failed to connect to real Socket.IO server for TabID=${tabid}: ${err.message}`,
-          ),
-        );
-      });
+    // Listen for connect events from the target Socket.IO and forward to the proxy Socket.IO.
+    _targetSocketIO.on("connect", () => {
+      _proxySocketIO?.emit("sparrow_internal_connect", "io server connect");
     });
 
-    // Listen for all dynamic events from the real server and forward to the frontend
-    realSocket.onAny((event: string, ...args: any[]) => {
-      console.log(
-        `Received event from real server for TabID=${tabid}: ${event}`,
-        args,
-      );
-
-      this.emitToFrontendClient(tabid, `socket-message-${tabid}`, {
-        event,
-        message: args,
-      });
+    // Listen for connect error events from the target Socket.IO and forward to the proxy Socket.IO.
+    _targetSocketIO.on("connect_error", (err) => {
+      _proxySocketIO?.emit("sparrow_internal_connect_error", err.message);
+      _proxySocketIO?.disconnect();
     });
 
-    // Handle disconnection of the real server
-    realSocket.on('disconnect', (reason) => {
-      console.warn(
-        `Real Socket.IO server disconnected for TabID=${tabid}: ${reason}`,
-      );
-      this.disconnectFromRealSocket(tabid);
+    // Listen for disconnect events from the target Socket.IO and forward to the proxy Socket.IO.
+    _targetSocketIO.on("disconnect", (err) => {
+      _proxySocketIO?.emit("sparrow_internal_disconnect", err);
+      _proxySocketIO?.disconnect();
     });
-  }
 
-  /**
-   * Register frontend client for a specific `tabid`.
-   */
-  registerFrontendClient(tabid: string, clientSocket): void {
-    // Register Disconnect to facilitate manual disconnection from sparrow
-    clientSocket.on(`disconnect-socket-${tabid}`, async () => {
-      const client = this.frontendClients.get(tabid);
-      if (client) {
-        await this.disconnectFromRealSocket(tabid, true);
-      }
+    // Listen for all dynamic events from the target Socket.IO and forward to the proxy Socket.IO.
+    _targetSocketIO.onAny((event: string, ...args: any[]) => {
+      _proxySocketIO?.emit(event, args);
     });
-    this.frontendClients.set(tabid, clientSocket);
-  }
 
-  /**
-   * Unregister frontend client for a specific `tabid`.
-   */
-  unregisterFrontendClient(tabid: string): void {
-    this.frontendClients.delete(tabid);
-  }
-
-  /**
-   * Disconnect from the real Socket.IO server for a specific `tabid`.
-   */
-  async disconnectFromRealSocket(
-    tabid: string,
-    manualDisconnection: boolean = false,
-  ): Promise<void> {
-    const realSocket = this.realSocketClients.get(tabid);
-
-    if (realSocket) {
-      realSocket.disconnect();
-      this.realSocketClients.delete(tabid);
-      if (!manualDisconnection) {
-        // Emit event in case of abrupt disconnection like real socket server going down
-        this.emitToFrontendClient(
-          tabid,
-          `socket-disconnect-${tabid}`,
-          'Disconnected from Socket.io',
-        );
-      }
-      console.log(`Disconnected Socket.IO connection for TabID=${tabid}`);
-    }
-  }
-
-  /**
-   * Emit a dynamic event to the real Socket.IO server for a specific `tabid`.
-   */
-  async emitToRealSocket(
-    tabid: string,
-    event: string,
-    args: any[],
-  ): Promise<void> {
-    const realSocket = this.realSocketClients.get(tabid);
-
-    if (!realSocket) {
-      throw new Error(`No connection found for TabID=${tabid}`);
-    }
-
-    realSocket.emit(event, ...args);
-  }
-
-  /**
-   * Emit a dynamic event to the frontend Socket.IO client for a specific `tabid`.
-   */
-  async emitToFrontendClient(
-    tabid: string,
-    event: string,
-    data: any,
-  ): Promise<void> {
-    const frontendSocket = this.frontendClients.get(tabid);
-
-    if (!frontendSocket) {
-      throw new Error(`No connection found for TabID=${tabid}`);
-    }
-    frontendSocket.emit(event, data);
+    return _targetSocketIO;
   }
 }
