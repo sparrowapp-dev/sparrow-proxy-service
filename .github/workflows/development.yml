@@ -2,7 +2,7 @@ name: Development
 on:
   push:
     branches:
-      - development
+      - pratik/dev
   workflow_dispatch:
 jobs:
    build:
@@ -34,7 +34,7 @@ jobs:
 
          - uses: Azure/k8s-set-context@v2
            with:
-              kubeconfig: ${{ secrets.KUBE_CONFIG }}
+              kubeconfig: ${{ secrets.NEW_KUBE_CONFIG }}
 
          - uses: Azure/k8s-deploy@v4
            with:
