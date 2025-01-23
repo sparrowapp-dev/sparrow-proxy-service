@@ -6,9 +6,9 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-    // Increase payload size limit
-    app.use(bodyParser.json({ limit: '50mb' }));
-    app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+  // Increase payload size limit
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
   /**
    * The url endpoint for open api ui
@@ -31,8 +31,8 @@ async function bootstrap() {
    */
   const SWAGGER_API_CURRENT_VERSION = '1.0';
 
-   // Use the custom WebSocket adapter to handle both WS and SocketIo
-   app.useWebSocketAdapter(new IoAdapter(app));
+  // Use the custom WebSocket adapter to handle both WS and SocketIo
+  //  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Configure Swagger options for API documentation
   const options = new DocumentBuilder()
