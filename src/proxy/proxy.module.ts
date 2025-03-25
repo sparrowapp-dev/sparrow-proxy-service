@@ -2,8 +2,9 @@ import { Module } from '@nestjs/common';
 import { SocketIoModule } from './socketio/socketio.module';
 import { HttpModule } from './http/http.module';
 import { WebSocketModule } from './websocket/websocket.module';
+import { GraphqlModule } from "./graphql/graphql.module";
 
 @Module({
-  imports: [HttpModule, SocketIoModule, WebSocketModule],
+  imports: [HttpModule, SocketIoModule, WebSocketModule, GraphqlModule],
 })
 export class ProxyModule {}
