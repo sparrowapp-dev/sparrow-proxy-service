@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService as NestHttpService } from '@nestjs/axios';
+import * as https from 'https';
 
 @Injectable()
 export class GraphqlService {
@@ -67,6 +68,7 @@ export class GraphqlService {
           method: config.method,
           headers: config.headers,
           data: config.data,
+          httpsAgent: new https.Agent({ rejectUnauthorized: false }), // allows expired SSL certs.
         });
         const resp = {
           status:

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService as NestHttpService } from '@nestjs/axios';
-import * as fs from 'fs';
+import * as https from 'https';
 import FormData from 'form-data';
 
 @Injectable()
@@ -208,6 +208,7 @@ export class HttpService {
           headers: config.headers,
           data: config.data,
           responseType: 'arraybuffer',
+          httpsAgent: new https.Agent({ rejectUnauthorized: false }), // allows expired SSL certs.
         });
 
         let contentType = response.headers['content-type'];
