@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { HttpService as NestHttpService } from '@nestjs/axios';
 import * as https from 'https';
 import FormData from 'form-data';
+import { lookup } from 'dns/promises';
+import * as ipaddr from 'ipaddr.js';
 
 @Injectable()
 export class HttpService {
@@ -93,6 +95,33 @@ export class HttpService {
     return statusMap[statusCode] || 'Unknown Status';
   }
 
+  private async validateUrl(targetUrl: string) {
+    try {
+      const url = new URL(targetUrl);
+
+      // Resolve hostname to IPs
+      const addresses = await lookup(url.hostname, { all: true });
+
+      for (const addr of addresses) {
+        const ip = ipaddr.parse(addr.address);
+
+        // Block local, private, or reserved IPs
+        if (
+          ip.range() === 'linkLocal' ||  // 169.254.0.0/16 (Azure IMDS lives here)
+          ip.range() === 'loopback'  ||  // 127.0.0.0/8
+          ip.range() === 'private'   ||  // 10.x, 192.168.x, 172.16-31.x
+          ip.range() === 'reserved'     // Other reserved ranges
+        ) {
+          throw new BadRequestException(
+            `Access to internal IP addresses is not allowed: ${addr.address}`,
+          );
+        }
+      }
+    } catch (err) {
+      throw new BadRequestException('Invalid or disallowed URL');
+    }
+  }
+
   async makeHttpRequest({
     url,
     method,
@@ -107,6 +136,7 @@ export class HttpService {
     contentType: string;
   }): Promise<{ status: string; data: any; headers: any }> {
     try {
+      await this.validateUrl(url);
       // Parse headers from stringified JSON
       const parsedHeaders: Record<string, string> = {};
       let headersArray;
