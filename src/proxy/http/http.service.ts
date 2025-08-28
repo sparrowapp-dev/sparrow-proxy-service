@@ -230,6 +230,22 @@ export class HttpService {
 
       // Add custom user agent
       config.headers['User-Agent'] = 'SparrowRuntime/1.0.0';
+
+      // DNS rebinding protection: re-validate resolved IP before request
+      const resolvedAddresses = await lookup(new URL(url).hostname, { all: true });
+      for (const addr of resolvedAddresses) {
+        const ip = ipaddr.parse(addr.address);
+        if (
+          ip.range() === 'linkLocal' ||
+          ip.range() === 'loopback'  ||
+          ip.range() === 'private'   ||
+          ip.range() === 'reserved'
+        ) {
+          throw new BadRequestException(
+            `Access to internal IP addresses is not allowed: ${addr.address}`,
+          );
+        }
+      }
       
       try {
         const response = await this.httpService.axiosRef({
