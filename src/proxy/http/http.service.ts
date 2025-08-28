@@ -9,7 +9,7 @@ import * as ipaddr from 'ipaddr.js';
 export class HttpService {
   constructor(private readonly httpService: NestHttpService) {}
 
-  private base64ToBuffer(base64: string): { buffer: Buffer; mime: string }  {
+  private base64ToBuffer(base64: string): { buffer: Buffer; mime: string } {
     const arr = base64.split(',');
     const mime = arr[0].match(/:(.*?);/)?.[1];
     const bstr = Buffer.from(arr[1], 'base64');
@@ -23,7 +23,7 @@ export class HttpService {
       101: 'Switching Protocols',
       102: 'Processing',
       103: 'Early Hints',
-  
+
       // 2xx Success
       200: 'OK',
       201: 'Created',
@@ -35,7 +35,7 @@ export class HttpService {
       207: 'Multi-Status',
       208: 'Already Reported',
       226: 'IM Used',
-  
+
       // 3xx Redirection
       300: 'Multiple Choices',
       301: 'Moved Permanently',
@@ -45,7 +45,7 @@ export class HttpService {
       305: 'Use Proxy',
       307: 'Temporary Redirect',
       308: 'Permanent Redirect',
-  
+
       // 4xx Client Errors
       400: 'Bad Request',
       401: 'Unauthorized',
@@ -76,7 +76,7 @@ export class HttpService {
       429: 'Too Many Requests',
       431: 'Request Header Fields Too Large',
       451: 'Unavailable For Legal Reasons',
-  
+
       // 5xx Server Errors
       500: 'Internal Server Error',
       501: 'Not Implemented',
@@ -89,9 +89,9 @@ export class HttpService {
       508: 'Loop Detected',
       509: 'Bandwidth Limit Exceeded',
       510: 'Not Extended',
-      511: 'Network Authentication Required'
+      511: 'Network Authentication Required',
     };
-  
+
     return statusMap[statusCode] || 'Unknown Status';
   }
 
@@ -165,7 +165,22 @@ export class HttpService {
       try {
         switch (contentType) {
           case 'application/json':
-            config.data = typeof body === 'string' ? JSON.parse(body) : body;
+            if (typeof body === 'string') {
+              // Check if the body is a numeric string
+              const isNumeric = !isNaN(body as any) && !isNaN(parseFloat(body));
+              if (isNumeric) {
+                config.data = body; // Keep numeric string as is
+              } else {
+                // Try parsing as JSON only if it's not a numeric string
+                try {
+                  config.data = JSON.parse(body);
+                } catch (e) {
+                  config.data = body; // If parsing fails, use the original string
+                }
+              }
+            } else {
+              config.data = body;
+            }
             break;
 
           case 'application/x-www-form-urlencoded':
@@ -180,7 +195,7 @@ export class HttpService {
             // Filter and transform the body into key-value pairs
             const formBody: Record<string, string> = {};
             formParsedBody.forEach((item: any) => {
-                formBody[item.key] = item.value;
+              formBody[item.key] = item.value;
             });
 
             const formUrlEncoded = new URLSearchParams(formBody);
@@ -195,14 +210,17 @@ export class HttpService {
               typeof body === 'string' ? JSON.parse(body) : body;
             if (Array.isArray(parsedBody)) {
               for (const field of parsedBody || []) {
-                try{
+                try {
                   if (field?.base) {
                     const { buffer, mime } = this.base64ToBuffer(field.base);
-                    formData.append(field.key, buffer, { filename: field.value, contentType: mime });
-                  }else  {
+                    formData.append(field.key, buffer, {
+                      filename: field.value,
+                      contentType: mime,
+                    });
+                  } else {
                     formData.append(field.key, field.value);
                   }
-                }catch(e){
+                } catch (e) {
                   formData.append(field.key, field.value);
                 }
               }
@@ -258,40 +276,44 @@ export class HttpService {
         });
 
         let contentType = response.headers['content-type'];
-        let responseData = "";
+        let responseData = '';
         if (contentType?.startsWith('image/')) {
           const base64 = Buffer.from(response.data).toString('base64');
           responseData = `data:${contentType};base64,${base64}`;
         } else {
-           responseData =  Buffer.from(response.data).toString('utf-8');           
+          responseData = Buffer.from(response.data).toString('utf-8');
         }
 
         return {
-          status: response.status + ' ' + (response.statusText || this.getStatusText(response.status)),
+          status:
+            response.status +
+            ' ' +
+            (response.statusText || this.getStatusText(response.status)),
           data: `${responseData}`,
           headers: response.headers,
         };
       } catch (axiosError: any) {
-         try{
-           const responseData = Buffer.from(axiosError.response?.data).toString('utf-8'); 
-         return {
-           status: axiosError.response?.status
-             ? axiosError.response?.status +
-               ' ' +
-               (axiosError.response?.statusText || this.getStatusText(axiosError.response?.status))
-             : null,
-           data: responseData || { message: axiosError.message },
-           headers: axiosError.response?.headers,
-         };
-
-         }
-         catch(e){
+        try {
+          const responseData = Buffer.from(axiosError.response?.data).toString(
+            'utf-8',
+          );
+          return {
+            status: axiosError.response?.status
+              ? axiosError.response?.status +
+                ' ' +
+                (axiosError.response?.statusText ||
+                  this.getStatusText(axiosError.response?.status))
+              : null,
+            data: responseData || { message: axiosError.message },
+            headers: axiosError.response?.headers,
+          };
+        } catch (e) {
           return {
             status: null,
             data: { message: axiosError.message },
             headers: axiosError.response?.headers,
           };
-         }
+        }
       }
     } catch (error: any) {
       console.error('HTTP Service Error:', error);
