@@ -9,14 +9,14 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { HttpService } from './http.service';
+import { GraphqlService } from './graphql.service';
 import { Request, Response } from 'express';
 
 @Controller('proxy')
-export class HttpController {
-  constructor(private readonly httpService: HttpService) {}
+export class GraphqlController {
+  constructor(private readonly graphqlService: GraphqlService) {}
 
-  @Post('http-request')
+  @Post('graphql-request')
   async handleHttpRequest(
     @Body('url') url: string,
     @Body('method') method: string,
@@ -27,18 +27,13 @@ export class HttpController {
     @Res() res: Response,
   ) {
     try {
-      const response = await this.httpService.makeHttpRequest({
+      const response = await this.graphqlService.makeGraphqlRequest({
         url,
         method,
         headers,
         body,
         contentType,
       });
-
-      // Set the response headers and status
-      // response.headers.forEach((value, key) => {
-      //   // res.setHeader(key, value);
-      // });
 
       return res.status(200).send(response);
     } catch (error) {

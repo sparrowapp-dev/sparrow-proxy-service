@@ -2,91 +2,121 @@ import {
   WebSocketGateway,
   WebSocketServer,
   OnGatewayConnection,
-  OnGatewayDisconnect,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { SocketIoService } from './socketio.service';
+} from "@nestjs/websockets";
+import { Server, Socket as SocketServer } from "socket.io";
+import { SocketIoService } from "./socketio.service";
+import { WebSocketService } from "./websocket.service";
 
-@WebSocketGateway({ cors: true, path: '/' })
-export class SocketIoGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+@WebSocketGateway( {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+  path: "/socket.io",
+  transports: ["websocket"],
+})
+export class SocketIoGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly socketIoService: SocketIoService) {}
+  constructor(
+    private readonly socketIoService: SocketIoService,
+    private readonly websocketService: WebSocketService,
+  ) {}
 
-  /**
-   * Handle WebSocket connection from the frontend with `tabid`.
-   */
-  async handleConnection(client: Socket) {
-    const { url, namespace, tabid, headers } = client.handshake.query;
+  async afterInit() {
+    console.log("Socket.io Handler Gateway initialized!");
+  }
 
-    if (!url || !namespace || !tabid) {
-      client.disconnect();
+  async handleConnection(proxySocketIO: SocketServer) {
+    const { targetUrl, namespace, headers, targetType } =
+      proxySocketIO.handshake.query;
+
+    if (!targetUrl || !namespace) {
+      proxySocketIO.disconnect();
       console.error(
-        'Missing required query parameters: url, namespace, or tabid',
+        "Missing required query parameters: url, namespace, or tabid",
       );
       return;
     }
 
     try {
-      const parsedHeaders = headers ? JSON.parse(headers as string) : {};
-
-      // Register frontend client
-      this.socketIoService.registerFrontendClient(tabid as string, client);
-
-      // Connect to the real Socket.IO server
-      await this.socketIoService.connectToRealSocket(
-        tabid as string,
-        url as string,
-        namespace as string,
-        parsedHeaders,
+      const parsedHeaders = JSON.parse(headers as string);
+      const headersObject: { [key: string]: string } = parsedHeaders.reduce(
+        (
+          acc: Record<string, string>,
+          { key, value }: { key: string; value: string },
+        ) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as { [key: string]: string },
       );
 
-      console.log(`Proxy connection established for TabID=${tabid}`);
+      if (targetType === "socketio") {
+        // Establish a connection to the real Socket.IO server
+        const targetSocketIO =
+          await this.socketIoService.connectToTargetSocketIO(
+            proxySocketIO,
+            targetUrl as string,
+            namespace as string,
+            headersObject,
+          );
 
-      // Listen for all dynamic events from the frontend and forward them
-      client.onAny(async (event: string, ...args: any[]) => {
-        console.log(
-          `Received event from frontend for TabID=${tabid}: ${event}`,
-          args,
+        proxySocketIO.on("disconnect", async () => {
+          // Disconnecting target Socket.IO will automatically disconnects proxy Socket.IO in chain.
+          targetSocketIO?.disconnect();
+        });
+
+        // Listen for all dynamic events from the frontend and forward them to target Socket.IO.
+        proxySocketIO.onAny(async (event: string, args: any) => {
+          try {
+            if (event === "sparrow_internal_disconnect") {
+              // Disconnecting target Socket.IO will automatically disconnects proxy Socket.IO in chain.
+              targetSocketIO?.disconnect();
+            } else {
+              targetSocketIO?.emit(event, args);
+            }
+          } catch (err) {
+            console.error(
+              `Failed to forward event ${event} for ${err.message}`,
+            );
+          }
+        });
+      } else if (targetType === "websocket") {
+        // Establish a connection to the real Socket.IO server
+        const targetWebSocket = await this.websocketService.establishConnection(
+          proxySocketIO,
+          targetUrl as string,
+          headersObject,
         );
 
-        try {
-          // Forward the dynamic event and its arguments to the real server
-          await this.socketIoService.emitToRealSocket(
-            tabid as string,
-            event,
-            args,
-          );
-        } catch (err) {
-          console.error(
-            `Failed to forward event ${event} for TabID=${tabid}: ${err.message}`,
-          );
-        }
-      });
+        proxySocketIO.on("disconnect", async () => {
+          // Disconnecting target Socket.IO will automatically disconnects proxy Socket.IO in chain.
+          targetWebSocket?.close();
+        });
+
+        // Listen for all dynamic events from the frontend and forward them to target Socket.IO.
+        proxySocketIO.onAny(async (event: string, args: any) => {
+          try {
+            if (event === "sparrow_internal_disconnect") {
+              // Disconnecting target Socket.IO will automatically disconnects proxy Socket.IO in chain.
+              targetWebSocket?.close();
+            } else {
+              targetWebSocket?.send(args);
+            }
+          } catch (err) {
+            console.error(
+              `Failed to forward event ${event} for ${err.message}`,
+            );
+          }
+        });
+      }
     } catch (err) {
       console.error(
-        `Failed to connect to real Socket.IO server for TabID=${tabid}: ${err.message}`,
+        `Failed to connect to real Socket.IO server for ${err.message}`,
       );
-      client.disconnect();
+      proxySocketIO.disconnect();
     }
-  }
-
-  /**
-   * Handle WebSocket disconnection for a specific `tabid`.
-   */
-  async handleDisconnect(client: Socket) {
-    const { tabid } = client.handshake.query;
-
-    if (!tabid) {
-      console.error('TabID missing on disconnection');
-      return;
-    }
-
-    console.log(`Proxy connection closed for TabID=${tabid}`);
-    await this.socketIoService.disconnectFromRealSocket(tabid as string);
-    this.socketIoService.unregisterFrontendClient(tabid as string);
   }
 }
