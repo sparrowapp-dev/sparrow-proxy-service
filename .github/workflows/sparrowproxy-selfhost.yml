@@ -39,6 +39,6 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg GITHUB_TOKEN=${{ secrets.SPARROW_GITHUB_TOKEN }} \
-            -t ssparrowapi/sparrow-proxy:${DOCKER_IMAGE_VERSION} \
-            -t ssparrowapi/sparrow-proxy:latest \
+            -t sparrowapi/sparrow-proxy:${DOCKER_IMAGE_VERSION} \
+            -t sparrowapi/sparrow-proxy:latest \
             --push .
