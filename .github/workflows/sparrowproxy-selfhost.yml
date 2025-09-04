@@ -1,16 +1,9 @@
 name: Self-host Docker Image
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      branch:
-        description: "Git branch to build"
-        required: true
-        default: main
-        type: string
-      image_version:
-        description: "Docker image version (e.g. 1.2.3)"
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -19,16 +12,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: self-host
-    env:
-      DOCKER_IMAGE_VERSION: ${{ inputs.image_version }}
-      BUILD_BRANCH: ${{ inputs.branch }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ env.BUILD_BRANCH }}
-          fetch-depth: 0
+
+      - name: Read version from package.json
+        id: version
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "jq not found"; exit 1
+          fi
+          V=$(jq -r '.version' package.json)
+          if [ -z "$V" ] || [ "$V" = "null" ]; then
+            echo "Version not found in package.json"; exit 1
+          fi
+          if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version $V is not valid semver (expected X.Y.Z)"; exit 1
+          fi
+          echo "full=$V" >> "$GITHUB_OUTPUT"
+ 
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -44,9 +47,11 @@ jobs:
 
       - name: Build and push (multi-arch)
         run: |
-          echo "Building version: ${DOCKER_IMAGE_VERSION}" 
+          set -euo pipefail
+          VERSION='${{ steps.version.outputs.full }}'
+          echo "Building image tag: $VERSION" 
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            -t sparrowapi/sparrow-proxy:${DOCKER_IMAGE_VERSION} \
+            -t $DOCKER_IMAGE_NAME:$VERSION \
             -t sparrowapi/sparrow-proxy:latest \
             --push .
