@@ -2,6 +2,11 @@ name: Self-host Docker Image
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: "Git branch to build"
+        required: true
+        default: main
+        type: string
       image_version:
         description: "Docker image version (e.g. 1.2.3)"
         required: true
@@ -16,10 +21,14 @@ jobs:
     environment: self-host
     env:
       DOCKER_IMAGE_VERSION: ${{ inputs.image_version }}
+      BUILD_BRANCH: ${{ inputs.branch }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BUILD_BRANCH }}
+          fetch-depth: 0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
