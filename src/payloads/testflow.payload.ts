@@ -162,10 +162,6 @@ export class TestflowRunDto {
   @IsString()
   @IsOptional()
   userId:string;
-
-  @IsString()
-  @IsOptional()
-  selectedAgent:WorkspaceUserAgentBaseEnum
 }
 
 export class NodeData {

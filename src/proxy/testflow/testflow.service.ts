@@ -27,145 +27,23 @@ export class TestflowService {
     headers: string,
     body: string,
     contentType: string,
-    selectedAgent: WorkspaceUserAgentBaseEnum,
     signal?: AbortSignal,
     ) {
-    const startTime = performance.now();
     try {
-    let response;
-    // Cloud Agent - call makeHttpRequest directly
-    if (selectedAgent === "Cloud Agent") {
-      try {
-        const cloudResponse = await this.httpService.makeHttpRequest({
-          url,
-          method,
-          headers,
-          body,
-          contentType,
-        });
-        return success({
-          body: cloudResponse.data,
-          status: cloudResponse.status,
-          headers: cloudResponse.headers,
-        });
-      } catch (cloudError) {
-        return error(cloudError.message || "Cloud agent request failed");
-      }
-        } else {
-            try {
-                let jsonHeader;
-                try {
-                jsonHeader = JSON.parse(headers);
-                console.log("[makeHttpRequestV2] parsed headers", jsonHeader);
-                } catch {
-                console.warn("[makeHttpRequestV2] failed to parse headers, using []");
-                jsonHeader = [];
-                }
-                const headersObject = jsonHeader.reduce(
-                (
-                    acc: Record<string, string>,
-                    header: { key: string; value: string },
-                ) => {
-                    acc[header.key] = header.value;
-                    return acc;
-                },
-                {},
-                );
-                let requestData = body || {};
-                console.log("[makeHttpRequestV2] initial requestData", requestData);
-                if (contentType === "multipart/form-data") {
-                console.log("[makeHttpRequestV2] handling multipart/form-data");
-                const formData = new FormData();
-                const parsedBody = JSON.parse(body);
-                for (const field of parsedBody || []) {
-                    try {
-                    if (field?.base) {
-                        const file = await new Base64Converter().base64ToFile(
-                        field.base,
-                        field.value,
-                        );
-                        formData.append(field.key, file);
-                    } else {
-                        formData.append(field.key, field.value);
-                    }
-                    } catch (e) {
-                    console.error("[makeHttpRequestV2] formData field error", e);
-                    formData.append(field.key, field.value);
-                    }
-                }
-                requestData = formData;
-                delete headersObject["Content-Type"]; // let axios set boundary
-                } else if (contentType === "application/x-www-form-urlencoded") {
-                console.log("[makeHttpRequestV2] handling urlencoded body");
-                const urlSearchParams = new URLSearchParams();
-                const parsedBody = JSON.parse(body);
-                (parsedBody || []).forEach(
-                    (field: { key: string; value: string }) => {
-                    urlSearchParams.append(field.key, field.value);
-                    },
-                );
-                requestData = urlSearchParams;
-                } else if (
-                contentType === "application/json" ||
-                contentType === "text/plain"
-                ) {
-                headersObject["Content-Type"] = contentType;
-                }
-                const axiosResponse = await Promise.race([
-                axios({
-                    method,
-                    url,
-                    data: requestData || {},
-                    headers: { ...headersObject },
-                    responseType: "arraybuffer",
-                    validateStatus: () => true,
-                }),
-                this.waitForAbort(signal),
-                ]);
-                if (signal?.aborted) {
-                console.warn("[makeHttpRequestV2] request was aborted");
-                throw new DOMException("Request was aborted", "AbortError");
-                }
-                let responseData = "";
-                const responseContentType = axiosResponse.headers["content-type"] || "";
-                if (responseContentType.startsWith("image/")) {
-                console.log("[makeHttpRequestV2] handling image response");
-                const base64 = btoa(
-                    new Uint8Array(axiosResponse.data).reduce(
-                    (data, byte) => data + String.fromCharCode(byte),
-                    "",
-                    ),
-                );
-                responseData = `data:${responseContentType};base64,${base64}`;
-                } else {
-                responseData = new TextDecoder("utf-8").decode(axiosResponse.data);
-                }
-                const status = `${axiosResponse.status} ${
-                axiosResponse.statusText ||
-                new StatusCode().getText(axiosResponse.status)
-                }`;
-                return success({
-                body: responseData,
-                status: status,
-                headers: Object.fromEntries(
-                    Object.entries(axiosResponse.headers),
-                ),
-                });
-            } catch (axiosError: any) {
-                console.error("[makeHttpRequestV2] axios error", axiosError);
-                if (signal?.aborted) {
-                throw new DOMException("Request was aborted", "AbortError");
-                }
-                return error(axiosError.message || "Browser agent request failed");
-            }
-        }
-    } catch (e) {
-        if (signal?.aborted) {
-        console.warn("[makeHttpRequestV2] aborted at outer catch");
-        throw new DOMException("Request was aborted", "AbortError");
-        }
-        console.error("[makeHttpRequestV2] request error", e);
-        return error(String(e));
+      const response = await this.httpService.makeHttpRequest({
+        url,
+        method,
+        headers,
+        body,
+        contentType,
+      });
+     return success({
+        body: response.data,
+        status: response.status,
+        headers: response.headers,
+     });
+    } catch (cloudError) {
+      return error(cloudError.message || "Cloud agent request failed");
     }
   }
 
@@ -230,7 +108,6 @@ export class TestflowService {
             headers,
             body,
             contentType,
-            payload.selectedAgent,
             signal,
             );
             const duration = Date.now() - start;
