@@ -13,7 +13,7 @@ import {
   IsDate,
 } from 'class-validator';
 import { HTTPMethods } from "fastify";
-import { BodyModeEnum, WorkspaceUserAgentBaseEnum } from 'src/enum/testflow.enum';
+import { BodyModeEnum,} from 'src/enum/testflow.enum';
 import { AuthModeEnum } from 'src/enum/testflow.enum';
 import { Auth } from 'src/enum/testflow.enum';
 
@@ -146,6 +146,20 @@ export class RequestMetaData {
   auth?: Auth[];
 }
 
+export class TestflowEdges {
+  @IsString()
+  @IsNotEmpty()
+  id: string;
+
+  @IsString()
+  @IsNotEmpty()
+  source: string;
+
+  @IsString()
+  @IsNotEmpty()
+  target: string;
+}
+
 export class TestflowRunDto {
   @IsArray()
   @Type(() => TestflowNodes)
@@ -158,6 +172,12 @@ export class TestflowRunDto {
   @Type(() => VariableDto)
   @ValidateNested({ each: true })
   variables: VariableDto[];
+
+  @IsArray()
+  @Type(() => TestflowEdges)
+  @ValidateNested({ each: true })
+  @IsOptional()
+  edges: TestflowEdges[];
 
   @IsString()
   @IsOptional()
@@ -223,6 +243,14 @@ export class TestflowSchedularHistoryRequest {
   @IsString()
   @IsOptional()
   time: string;
+
+  @IsString()
+  @IsOptional()
+  errorMessage?: string;
+
+  @IsString()
+  @IsOptional()
+  error?: string;
 }
 
 export class TestFlowSchedularRunHistory {

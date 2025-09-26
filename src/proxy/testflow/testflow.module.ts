@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TestflowController } from './testflow.controller';
 import { TestflowService } from './testflow.service';
-import { HttpModule } from '../http/http.module';
 import { DecodeTestflow } from 'src/utils/decode-testflow';
+import { HttpModule as NestHttpModule } from '@nestjs/axios';
 
 @Module({
-  imports: [HttpModule],
+  imports: [NestHttpModule],
   controllers: [TestflowController],
   providers: [TestflowService, DecodeTestflow],
 })
