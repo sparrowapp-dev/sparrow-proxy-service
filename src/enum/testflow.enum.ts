@@ -48,3 +48,12 @@ export interface TFAPIResponseType {
   headers?: object;
   status?: string;
 }
+
+export enum RequestDataTypeEnum {
+  JSON = "JSON",
+  XML = "XML",
+  HTML = "HTML",
+  TEXT = "Text",
+  JAVASCRIPT = "JavaScript",
+  IMAGE = "Image",
+}
