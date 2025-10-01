@@ -409,6 +409,7 @@ export class TestflowService {
         createdAt: new Date(),
         createdBy: payload.userId,
         requests: [],
+        responses:[]
     };
 
     let requestChainResponse: Record<string, any> = {};
@@ -499,6 +500,14 @@ export class TestflowService {
                         }
                 : {}),
             });
+            history.responses.push({
+                headers: resData.headers,
+                status: resData.status,
+                body: resData.body,
+                time: resData.time,
+                size: resData.size,
+                responseContentType: resData.responseContentType ,
+            })
             // Build chaining object
             const responseHeader =
                 this._decodeRequest.setResponseContentType(formattedHeaders);
@@ -580,6 +589,13 @@ export class TestflowService {
                 errorMessage:response.message,
                 error:response.error
             });
+            history.responses.push({
+                headers: resData.headers,
+                status: resData.status,
+                body: resData.body,
+                time: resData.time,
+                size: resData.size,
+            })
             }
         } catch (error) {
             const duration = Date.now() - start;
@@ -604,6 +620,13 @@ export class TestflowService {
                 errorMessage:error.message,
                 error:error
             });
+            history.responses.push({
+                headers: resData.headers,
+                status: resData.status,
+                body: resData.body,
+                time: resData.time,
+                size: resData.size,
+            })
         }
         executedNodes.push({
             id: element.id,

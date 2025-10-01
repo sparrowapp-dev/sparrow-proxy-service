@@ -13,7 +13,7 @@ import {
   IsDate,
 } from 'class-validator';
 import { HTTPMethods } from "fastify";
-import { BodyModeEnum,} from 'src/enum/testflow.enum';
+import { BodyModeEnum, RequestDataTypeEnum,} from 'src/enum/testflow.enum';
 import { AuthModeEnum } from 'src/enum/testflow.enum';
 import { Auth } from 'src/enum/testflow.enum';
 
@@ -253,6 +253,37 @@ export class TestflowSchedularHistoryRequest {
   error?: string;
 }
 
+export class TFKeyValueStoreDto {
+  @IsString()
+  key: string;
+
+  @IsString()
+  value: string;
+}
+
+export class TestflowSchedularHistoryResponse {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TFKeyValueStoreDto)
+  headers: TFKeyValueStoreDto[];
+
+  @IsString()
+  status: string;
+
+  @IsString()
+  body: string;
+
+  @IsNumber()
+  time: number;
+
+  @IsNumber()
+  size: number;
+
+  @IsOptional()
+  @IsString()
+  responseContentType?: RequestDataTypeEnum;
+}
+
 export class TestFlowSchedularRunHistory {
   @IsString()
   @IsNotEmpty()
@@ -261,6 +292,10 @@ export class TestFlowSchedularRunHistory {
   @IsArray()
   @IsOptional()
   requests?: TestflowSchedularHistoryRequest[];
+
+  @IsArray()
+  @IsOptional()
+  responses?:TestflowSchedularHistoryResponse[];
 
   @IsString()
   @IsNotEmpty()
