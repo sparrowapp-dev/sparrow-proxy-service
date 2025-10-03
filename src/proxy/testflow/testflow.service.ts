@@ -487,18 +487,11 @@ export class TestflowService {
                 failedRequests++;
             }
             totalTime += duration;
-            const resBody = JSON.parse(response.data.body);
             history.requests.push({
                 method: requestData.method as string,
                 name: requestData.name as string,
                 status: resData.status,
                 time: new ParseTime().convertMilliseconds(duration),
-                ...(statusCode < 200 || statusCode >= 300
-                    ? {
-                        errorMessage:resBody?.message,
-                        error: resBody?.error || undefined,
-                        }
-                : {}),
             });
             history.responses.push({
                 headers: resData.headers,
