@@ -317,13 +317,13 @@ export class TestflowService {
                   (axiosError.response?.statusText ||
                     this.getStatusText(axiosError.response?.status))
                 : null,
-              data: responseData || { message: axiosError.message },
+              data: `${responseData}` || JSON.stringify({ message: axiosError.message }),
               headers: axiosError.response?.headers,
             };
           } catch (e) {
             return {
               status: null,
-              data: { message: axiosError.message },
+              data: JSON.stringify({ message: axiosError.message }),
               headers: axiosError.response?.headers,
             };
           }
