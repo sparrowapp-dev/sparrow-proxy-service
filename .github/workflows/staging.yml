@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - release/2.34.0
-      - release/stg-workflow
   workflow_dispatch:
 jobs:
    build:
