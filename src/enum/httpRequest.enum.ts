@@ -1,11 +1,3 @@
-export interface KeyWrapper {
-  key: string;
-}
-
-export interface ValueWrapper {
-  value: string;
-}
-
 export enum RequestDataTypeEnum {
   JSON = "JSON",
   XML = "XML",
@@ -30,4 +22,10 @@ export enum ResponseStatusCode {
   ERROR = "Not Found",
 }
 
-export interface KeyValue extends KeyWrapper, ValueWrapper {}
+export interface KeyValue {
+  key: string;
+  value: string;
+  checked?: boolean;
+  base?: string;
+  type?: "text" | "file";
+}
