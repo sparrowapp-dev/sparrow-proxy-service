@@ -41,4 +41,4 @@ jobs:
               action: deploy
               namespace: sparrow-test
               manifests: |
-                 ./deploymentManifests/prod-test.yml
+                 ./deploymentManifests/deployment.yml
