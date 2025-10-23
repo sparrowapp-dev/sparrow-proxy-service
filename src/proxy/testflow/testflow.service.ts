@@ -149,9 +149,6 @@ export class TestflowService {
       if (isLocalhost) {
         throw new BadRequestException('This API is local and cannot run on the cloud. Deploy it to enable execution.'); 
       }
-      if (targetUrl.startsWith('/') || targetUrl.startsWith('./') || !targetUrl.includes('://')) {
-        throw new BadRequestException('This API is local and cannot run on the cloud. Deploy it to enable execution.');
-      }
   }
 
   private async validateFormData(
