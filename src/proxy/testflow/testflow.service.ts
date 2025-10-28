@@ -109,30 +109,60 @@ export class TestflowService {
   }
   
   private async validateUrl(targetUrl: string) {
+      let url: URL;
+      
       try {
-        const url = new URL(targetUrl);
-  
-        // Resolve hostname to IPs
-        const addresses = await lookup(url.hostname, { all: true });
-  
-        for (const addr of addresses) {
-          const ip = ipaddr.parse(addr.address);
-  
-          // Block local, private, or reserved IPs
-          if (
-            ip.range() === 'linkLocal' ||  // 169.254.0.0/16 (Azure IMDS lives here)
-            ip.range() === 'loopback'  ||  // 127.0.0.0/8
-            ip.range() === 'private'   ||  // 10.x, 192.168.x, 172.16-31.x
-            ip.range() === 'reserved'     // Other reserved ranges
-          ) {
-            throw new BadRequestException(
-              `Access to internal IP addresses is not allowed: ${addr.address}`,
-            );
-          }
-        }
-      } catch (err) {
-        throw new BadRequestException('Invalid or disallowed URL');
+        url = new URL(targetUrl);
+      } catch (error) {
+        throw new BadRequestException('Invalid URL');
       }
+
+      const hostname = url.hostname.toLowerCase();
+        
+      const localhostPatterns = [
+        'localhost',
+        '127.0.0.1', 
+        '0.0.0.0',
+        '::1', // IPv6 localhost
+      ];
+      
+      // Check for private IP ranges
+      const isPrivateIP = (
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        (hostname.startsWith('172.') && 
+          (() => {
+            const parts = hostname.split('.');
+            if (parts.length >= 2) {
+              const secondOctet = parseInt(parts[1], 10);
+              return secondOctet >= 16 && secondOctet <= 31;
+            }
+            return false;
+          })()
+        ) ||
+        hostname.endsWith('.local') ||
+        hostname.includes('.local.')
+      );
+      
+      const isLocalhost = localhostPatterns.includes(hostname) || isPrivateIP;
+      
+      if (isLocalhost) {
+        throw new BadRequestException('This API is local and cannot run on the cloud. Deploy it to enable execution.'); 
+      }
+  }
+
+  private async validateFormData(
+    body: any,
+    contentType: string,
+  ) {
+    if (contentType === 'multipart/form-data' && body) {
+      const formData = JSON.parse(body);
+      formData.find((item: any) => {
+        if (item?.type === 'file') {
+         throw new BadRequestException('This API includes form-data with file uploads that are stored locally and cannot run in scheduled/cloud execution. Remove or replace the files to enable execution.');
+        }
+      });
+    }
   }
 
   private async makeHttpRequest({
@@ -150,6 +180,7 @@ export class TestflowService {
     }): Promise<{ status: string; data: any; headers: any }> {
       try {
         await this.validateUrl(url);
+        await this.validateFormData(body, contentType);
         // Parse headers from stringified JSON
         const parsedHeaders: Record<string, string> = {};
         let headersArray;
@@ -317,19 +348,19 @@ export class TestflowService {
                   (axiosError.response?.statusText ||
                     this.getStatusText(axiosError.response?.status))
                 : null,
-              data: responseData || { message: axiosError.message },
+              data: `${responseData}` || JSON.stringify({ message: axiosError.message }),
               headers: axiosError.response?.headers,
             };
           } catch (e) {
             return {
               status: null,
-              data: { message: axiosError.message },
+              data: JSON.stringify({ message: axiosError.message }),
               headers: axiosError.response?.headers,
             };
           }
         }
       } catch (error: any) {
-        console.error('HTTP Service Error:', error);
+        // console.error('HTTP Service Error:', error);
         throw new Error(error.message || 'Unknown error occurred');
       }
   }
