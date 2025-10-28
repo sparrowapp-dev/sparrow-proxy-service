@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import JSON5 from "json5"
-import type  { KeyValue} from "src/enum/httpRequest.enum";
+import type  { KeyValue } from "src/enum/httpRequest.enum";
 import { RequestDataTypeEnum } from "src/enum/httpRequest.enum";
 
 /**
@@ -96,13 +96,13 @@ class DecodeTestflow {
    * Return only checked KeyValue entries (preserves order).
    */
   private extractKeyValue = (
-    pairs?: Array<{ key: string; value: string; checked: boolean }>,
+    pairs?: KeyValue[],
   ): KeyValue[] => {
     if (!Array.isArray(pairs)) return [];
     const checkedPairs: KeyValue[] = [];
     for (const pair of pairs) {
       if (pair && pair.checked && pair.key) {
-        checkedPairs.push({ key: pair.key, value: String(pair.value || "") });
+        checkedPairs.push({ key: pair.key, type: pair.type, value: String(pair.value || "") });
       }
     }
     return checkedPairs;
@@ -482,7 +482,7 @@ class DecodeTestflow {
                 String(field.value),
                 environmentVariables,
               ),
-              type: "text",
+              type: field.type,
             });
           });
         }
