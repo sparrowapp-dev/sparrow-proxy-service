@@ -470,8 +470,8 @@ export class TestflowService {
         const decodeData = this._decodeRequest.init(
             requestData,
             environmentVariables.filter(
-            (env: { key: string; value: string; checked: boolean }) =>
-                env.key?.trim() && env.value?.trim(),
+            (env: { key: string; value: string | any; checked: boolean }) =>
+                env.key?.trim() && env?.value,
             ),
             requestChainResponse,
         );
