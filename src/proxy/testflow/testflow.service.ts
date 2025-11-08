@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TestflowNodes, TestflowRunDto, TestFlowSchedularRunHistory } from 'src/payloads/testflow.payload';
+import { TestflowDataSetRunDto, TestflowNodes, TestflowRunDto, TestFlowSchedularRunHistory } from 'src/payloads/testflow.payload';
 import { Logger } from '@nestjs/common';
 import { success,error } from 'src/enum/httpResponseFormat';
 import { DecodeTestflow, RequestData } from 'src/utils/decode-testflow';
@@ -691,6 +691,12 @@ export class TestflowService {
         requestChainResponse,
         nodes: executedNodes,
     };
+  }
+
+  async runTestflowDataset(payload: TestflowDataSetRunDto) {
+    const promises = payload.testflowItems.map(item => this.runTestflow(item));
+    const response = await Promise.all(promises);
+    return response;
   }
 }
 
