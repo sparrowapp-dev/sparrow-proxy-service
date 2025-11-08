@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { TestflowService } from './testflow.service';
-import { TestflowRunDto } from 'src/payloads/testflow.payload';
+import { TestflowDataSetRunDto, TestflowRunDto } from 'src/payloads/testflow.payload';
 
 @Controller('proxy/testflow')
 export class TestflowController {
@@ -25,6 +25,23 @@ export class TestflowController {
   ) {
     try {
       const result = await this.testflowService.runTestflow(payload);
+      return res.status(200).send(result);
+    } catch (error: any) {
+      throw new HttpException(
+        error?.message || 'Failed to run testflow',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
+  @Post('/dataset-execute')
+  async testflowDataSetRun(
+    @Body() payload: TestflowDataSetRunDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.testflowService.runTestflowDataset(payload);
       return res.status(200).send(result);
     } catch (error: any) {
       throw new HttpException(
