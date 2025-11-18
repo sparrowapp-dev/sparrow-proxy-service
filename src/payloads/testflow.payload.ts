@@ -210,6 +210,10 @@ export class NodeData {
   requestData?: RequestMetaData;
 }
 
+export class TestflowDataSetRunDto{
+  testflowItems:TestflowRunDto[];
+}
+
 export class TestflowNodes {
   @IsString()
   @IsNotEmpty()
